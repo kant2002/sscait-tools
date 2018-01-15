@@ -59,17 +59,34 @@ let printPlayerRow player playerData =
     
     printfn ""
 
+let predictWins playerData=
+    playerData.results
+    |> Seq.filter (fun x -> x.Value.lose + x.Value.win < 2 && x.Value.win = 1)
+    |> Seq.length
+
+let winGames playerData=
+    playerData.results
+    |> Seq.filter (fun x -> x.Value.win = 2)
+
+let lostGames playerData=
+    playerData.results
+    |> Seq.filter (fun x -> x.Value.lose = 2)
+
+let drawGames playerData=
+    playerData.results
+    |> Seq.filter (fun x -> x.Value.lose = 1 && x.Value.win = 1)
+
+let notFullGames playerData=
+    playerData.results
+    |> Seq.filter (fun x -> x.Value.lose + x.Value.win < 2)
+
 let printPlayerPredictionRow player playerData threshold =
-    let dataToPrint = playerData.results |> Seq.filter (fun x -> x.Value.lose + x.Value.win < 2 && x.Value.win = 1) |> Seq.length
+    let predictedWins = predictWins playerData
     let totalGames = playerData.results |> Seq.map (fun x -> x.Value.lose + x.Value.win) |> Seq.sum
     let totalGamesLeft = playerData.results |> Seq.map (fun x -> 2 - (x.Value.lose + x.Value.win)) |> Seq.sum
-    //for pair in dataToPrint do
-    //    let y = pair.Value
-    //    printf ",%d-%d" y.win y.lose
     
-    if (playerData.winGames + dataToPrint >= threshold) then
-        printfn "%s,%d||%d,%d,%d" player playerData.winGames (playerData.winGames + dataToPrint) totalGames totalGamesLeft
-        // printfn "%d" (playerData.winGames + dataToPrint)
+    if (playerData.winGames + predictedWins >= threshold) then
+        printfn "%s,%d,%d,%d,%d" player playerData.winGames (playerData.winGames + predictedWins) totalGames totalGamesLeft
 
 let constructInternalState doc =
     let initialState = Map.empty<string,PlayerRow>
@@ -83,6 +100,26 @@ let printStats data =
     let totalGames = (data |> Seq.fold accumulatePlayerGames 0) / 2
     printfn "Total games: %d" totalGames
 
+let printBotStats (sourceFile: string) botName =
+    let doc = SSCAITResultsFile.Load(sourceFile).Rows
+    let data = constructInternalState doc 
+    let botStats = data.Item(botName)
+    printfn "Stats for bot %s" botName
+    printfn "Win games: %d" botStats.winGames
+    printfn "Predicted wins: %d" (predictWins botStats)
+    printfn "Win games"
+    for wg in winGames botStats do
+        printfn "\t%s (%d-%d)" wg.Key wg.Value.win wg.Value.lose
+    printfn "Lost games"
+    for wg in lostGames botStats do
+        printfn "\t%s (%d-%d)" wg.Key wg.Value.win wg.Value.lose
+    printfn "Draw games"
+    for wg in drawGames botStats do
+        printfn "\t%s (%d-%d)" wg.Key wg.Value.win wg.Value.lose
+    printfn "Not full games"
+    for wg in notFullGames botStats do
+        printfn "\t%s (%d-%d)" wg.Key wg.Value.win wg.Value.lose
+
 let printChart (sourceFile: string) =
     let doc = SSCAITResultsFile.Load(sourceFile).Rows
     let data = constructInternalState doc 
@@ -91,7 +128,8 @@ let printChart (sourceFile: string) =
 
 let printPrediction (sourceFile: string) threshold =
     let doc = SSCAITResultsFile.Load(sourceFile).Rows
-    let data = constructInternalState doc 
+    let data = constructInternalState doc
+    printfn "Bot,Score,PredictedScore,PlayedGames,GamesLeft"
     for record in data do
         printPlayerPredictionRow record.Key record.Value threshold
     printStats data

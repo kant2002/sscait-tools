@@ -37,12 +37,18 @@ let getResults count =
         |> Seq.concat
 
 
-type ModeOption = ModeGetData | ModePrintChart | ModePrintPrediction | ModeInvalid
+type ModeOption = 
+    | ModeGetData
+    | ModePrintChart
+    | ModePrintPrediction
+    | ModeBotStats
+    | ModeInvalid
 
 type CommandLineOptions = {
     mode: ModeOption
     gamesProcess: int
     filterThreshold: int
+    botName: string
 }
 
 // create the "helper" recursive function
@@ -64,6 +70,14 @@ let rec parseCommandLineRec args optionsSoFar =
         let newOptionsSoFar = { optionsSoFar with mode=ModePrintChart}
         parseCommandLineRec xs newOptionsSoFar 
 
+    | "botStats"::xs ->
+        match xs with
+        | [] -> 
+            optionsSoFar  
+        | botName::xss ->
+            let newOptionsSoFar = { optionsSoFar with botName = botName; mode=ModeBotStats }
+            parseCommandLineRec xss newOptionsSoFar 
+
     | "predict"::xs -> 
         match xs with
         | [] -> 
@@ -83,7 +97,8 @@ let parseCommandLine args =
     let defaultOptions = {
         mode = ModeInvalid;
         gamesProcess = 0;
-        filterThreshold = 0
+        filterThreshold = 0;
+        botName = "<<Not specified>>"
         }
 
     // call the recursive one with the initial options
@@ -106,6 +121,9 @@ let main argv =
             printfn "Printing chart"
             let sourceFile = Path.Combine(Directory.GetCurrentDirectory(), "results.txt")
             printChart sourceFile
+        | ModeBotStats ->
+            let sourceFile = Path.Combine(Directory.GetCurrentDirectory(), "results.txt")
+            printBotStats sourceFile commandArgs.botName
         | ModePrintPrediction ->
             let sourceFile = Path.Combine(Directory.GetCurrentDirectory(), "results.txt")
             printPrediction sourceFile commandArgs.filterThreshold

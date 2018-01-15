@@ -23,3 +23,7 @@ Install .NET Core SDK 2.1.4
     dotnet run predict <threshold>
 
 	*threshold* - specify which minimum predicted level of win games return. For SSCAIT 2017 make sense take 109 as threshold
+
+- Print bot stats
+
+	dotnet run botStats "Andrey Kurdiumov"
