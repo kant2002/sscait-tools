@@ -2,6 +2,7 @@
 
 open FSharp.Data
 open System.IO
+open System.Collections.Generic
 
 type SSCAITResultsFile = CsvProvider<"results.txt">
 type SSCAITResultsFileRow = SSCAITResultsFile.Row
@@ -24,7 +25,8 @@ type TournamentInformation = Map<string,PlayerRow>
 let registerResult currentResult result =
     match result with
         | 1 -> { currentResult with win = currentResult.win + 1 }
-        | other -> { currentResult with lose = currentResult.lose + 1 }
+        | 2 -> { currentResult with lose = currentResult.lose + 1 }
+        | other -> currentResult
 
 let registerPlayerResult player againstPlayer result =
     let currentPlayerData =
@@ -57,20 +59,29 @@ let printPlayerRow player playerData =
     
     printfn ""
 
-let printPlayerPredictionRow player playerData =
+let printPlayerPredictionRow player playerData threshold =
     let dataToPrint = playerData.results |> Seq.filter (fun x -> x.Value.lose + x.Value.win < 2 && x.Value.win = 1) |> Seq.length
+    let totalGames = playerData.results |> Seq.map (fun x -> x.Value.lose + x.Value.win) |> Seq.sum
+    let totalGamesLeft = playerData.results |> Seq.map (fun x -> 2 - (x.Value.lose + x.Value.win)) |> Seq.sum
     //for pair in dataToPrint do
     //    let y = pair.Value
     //    printf ",%d-%d" y.win y.lose
     
-    if (playerData.winGames + dataToPrint >= 108) then
-        printf "%s,%d||" player playerData.winGames
-        printfn "%d" (playerData.winGames + dataToPrint)
+    if (playerData.winGames + dataToPrint >= threshold) then
+        printfn "%s,%d||%d,%d,%d" player playerData.winGames (playerData.winGames + dataToPrint) totalGames totalGamesLeft
+        // printfn "%d" (playerData.winGames + dataToPrint)
 
 let constructInternalState doc =
     let initialState = Map.empty<string,PlayerRow>
     let data = doc |> Seq.fold processRecord initialState
     data
+
+let printStats data =
+    let accumulatePlayerGames state (playerData:KeyValuePair<string,PlayerRow>) =
+        let playerGames = playerData.Value.results |> Seq.map (fun x -> x.Value.lose + x.Value.win) |> Seq.sum
+        state + playerGames
+    let totalGames = (data |> Seq.fold accumulatePlayerGames 0) / 2
+    printfn "Total games: %d" totalGames
 
 let printChart (sourceFile: string) =
     let doc = SSCAITResultsFile.Load(sourceFile).Rows
@@ -78,8 +89,9 @@ let printChart (sourceFile: string) =
     for record in data do
         printPlayerRow record.Key record.Value
 
-let printPrediction (sourceFile: string) =
+let printPrediction (sourceFile: string) threshold =
     let doc = SSCAITResultsFile.Load(sourceFile).Rows
     let data = constructInternalState doc 
     for record in data do
-        printPlayerPredictionRow record.Key record.Value
+        printPlayerPredictionRow record.Key record.Value threshold
+    printStats data

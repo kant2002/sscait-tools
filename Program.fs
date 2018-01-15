@@ -41,6 +41,8 @@ type ModeOption = ModeGetData | ModePrintChart | ModePrintPrediction | ModeInval
 
 type CommandLineOptions = {
     mode: ModeOption
+    gamesProcess: int
+    filterThreshold: int
 }
 
 // create the "helper" recursive function
@@ -50,17 +52,25 @@ let rec parseCommandLineRec args optionsSoFar =
     | [] -> 
         optionsSoFar  
 
-    | "get"::xs -> 
-        let newOptionsSoFar = { optionsSoFar with mode=ModeGetData}
-        parseCommandLineRec xs newOptionsSoFar 
+    | "get"::xs ->
+        match xs with
+        | [] -> 
+            optionsSoFar  
+        | games::xss ->
+            let newOptionsSoFar = { optionsSoFar with gamesProcess = (games|> int); mode=ModeGetData }
+            parseCommandLineRec xss newOptionsSoFar 
 
     | "print"::xs -> 
         let newOptionsSoFar = { optionsSoFar with mode=ModePrintChart}
         parseCommandLineRec xs newOptionsSoFar 
 
     | "predict"::xs -> 
-        let newOptionsSoFar = { optionsSoFar with mode=ModePrintPrediction}
-        parseCommandLineRec xs newOptionsSoFar 
+        match xs with
+        | [] -> 
+            optionsSoFar  
+        | threshold::xss ->
+            let newOptionsSoFar = { optionsSoFar with filterThreshold = (threshold|> int); mode=ModePrintPrediction }
+            parseCommandLineRec xss newOptionsSoFar 
 
     // handle unrecognized option and keep looping
     | x::xs -> 
@@ -71,7 +81,9 @@ let rec parseCommandLineRec args optionsSoFar =
 let parseCommandLine args = 
     // create the defaults
     let defaultOptions = {
-        mode = ModeInvalid
+        mode = ModeInvalid;
+        gamesProcess = 0;
+        filterThreshold = 0
         }
 
     // call the recursive one with the initial options
@@ -84,7 +96,7 @@ let main argv =
     let commandArgs = parseCommandLine (argv |> Seq.toList)
     match commandArgs.mode with
         | ModeGetData ->
-            let doc = getResults 5649 
+            let doc = getResults commandArgs.gamesProcess
             use streamWriter = new StreamWriter("results.txt", false)
             streamWriter.WriteLine "Host,Guest,Result,Replay"
             for record in doc do
@@ -96,7 +108,7 @@ let main argv =
             printChart sourceFile
         | ModePrintPrediction ->
             let sourceFile = Path.Combine(Directory.GetCurrentDirectory(), "results.txt")
-            printPrediction sourceFile
+            printPrediction sourceFile commandArgs.filterThreshold
         | ModeInvalid ->
             printfn "Invalid arguments"
     
