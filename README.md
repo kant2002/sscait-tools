@@ -31,3 +31,9 @@ Install .NET Core SDK 2.1.4
 	Prints bot statistics and list bots agains which he wins, lose or has a draw
  
 	`dotnet run botStats "Andrey Kurdiumov"`
+
+- Print lost game replays
+
+	Prints URLs to lost game replays
+ 
+	`dotnet run lostGames "Andrey Kurdiumov"`

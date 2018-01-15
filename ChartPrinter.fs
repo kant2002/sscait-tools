@@ -120,6 +120,16 @@ let printBotStats (sourceFile: string) botName =
     for wg in notFullGames botStats do
         printfn "\t%s (%d-%d)" wg.Key wg.Value.win wg.Value.lose
 
+let printLostGames (sourceFile: string) botName =
+    let doc = SSCAITResultsFile.Load(sourceFile).Rows
+    let lostGames =
+        doc
+        |> Seq.filter (fun x -> (x.Host = botName && x.Result = 2) || (x.Guest = botName && x.Result = 1))
+        |> Seq.filter (fun x -> x.Replay <> "")
+
+    for g in lostGames do
+        printfn "%s" g.Replay
+
 let printChart (sourceFile: string) =
     let doc = SSCAITResultsFile.Load(sourceFile).Rows
     let data = constructInternalState doc 

@@ -42,6 +42,7 @@ type ModeOption =
     | ModePrintChart
     | ModePrintPrediction
     | ModeBotStats
+    | ModeLostGames
     | ModeInvalid
 
 type CommandLineOptions = {
@@ -86,6 +87,14 @@ let rec parseCommandLineRec args optionsSoFar =
             let newOptionsSoFar = { optionsSoFar with filterThreshold = (threshold|> int); mode=ModePrintPrediction }
             parseCommandLineRec xss newOptionsSoFar 
 
+    | "lostGames"::xs ->
+        match xs with
+        | [] -> 
+            optionsSoFar  
+        | botName::xss ->
+            let newOptionsSoFar = { optionsSoFar with botName = botName; mode=ModeLostGames }
+            parseCommandLineRec xss newOptionsSoFar 
+
     // handle unrecognized option and keep looping
     | x::xs -> 
         printfn "Option '%s' is unrecognized" x
@@ -113,9 +122,9 @@ let main argv =
         | ModeGetData ->
             let doc = getResults commandArgs.gamesProcess
             use streamWriter = new StreamWriter("results.txt", false)
-            streamWriter.WriteLine "Host,Guest,Result,Replay"
+            streamWriter.WriteLine "Timestamp,Host,Guest,Result,Replay"
             for record in doc do
-                let line = sprintf "%s,%s,%d,%s" record.Host record.Guest record.Result record.Replay
+                let line = sprintf "%d,%s,%s,%d,%s" record.Timestamp record.Host record.Guest record.Result record.Replay
                 streamWriter.WriteLine line
         | ModePrintChart ->
             printfn "Printing chart"
@@ -127,6 +136,9 @@ let main argv =
         | ModePrintPrediction ->
             let sourceFile = Path.Combine(Directory.GetCurrentDirectory(), "results.txt")
             printPrediction sourceFile commandArgs.filterThreshold
+        | ModeLostGames ->
+            let sourceFile = Path.Combine(Directory.GetCurrentDirectory(), "results.txt")
+            printLostGames sourceFile commandArgs.botName
         | ModeInvalid ->
             printfn "Invalid arguments"
     
